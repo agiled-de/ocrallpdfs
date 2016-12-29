@@ -76,7 +76,6 @@ def check_dependencies(language):
     except OSError:
         logging.error("ocrmypdf could not be executed, please install it with:\n" +
                       "sudo apt-get install pip3\n" +
-                      "sudo pip3 install --upgrade pip\n" +
                       "sudo apt-get install libffi-dev\n" +
                       "sudo pip3 install ocrmypdf")
         exit(1)
