@@ -66,6 +66,9 @@ def main():
     # Start the ocr
     for f in unprocessed_files:
         logging.info("Starting ocr for file: " + f)
+        if args.simulate:
+            logging.info("Simulation enabled file " + f + " would now be processed.")
+            continue
         try:
             subprocess.run(["ocrmypdf", "-l", language, f, f])
         except OSError:
@@ -137,6 +140,7 @@ def get_commandline_arguments():
                         "language that is installed on the system defaults to: "
                         + LANGUAGE)
     parser.add_argument("--logfile", help="path to a file the output is passed to")
+    parser.add_argument("-s", "--simulate", help="only show what would happen without actually doing any OCR", action="store_true")
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-v", "--verbosity", help="increase output verbosity", action="store_true")
     group.add_argument("-q", "--quiet", help="no output except errors", action="store_true")
