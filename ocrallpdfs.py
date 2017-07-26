@@ -12,18 +12,23 @@ import subprocess
 LANGUAGE = "deu"
 
 def main():
-    """TODO: Docstring for main.
-    :returns: TODO
+    """Entrypoint when used as an executable
+    :returns: None
 
     """
+
+    # Initialize Logging
     logging.basicConfig(level=logging.DEBUG)
     args = get_commandline_arguments()
     initialize_logging(args)
+
+    # Initialize Language
     language = args.language
     if not language:
         language = LANGUAGE
     check_dependencies(language)
     logging.info("The language " + language + " will be used for ocr processing")
+
     # Find all files that end with .pdf
     pdf_files = []
     for root, _, files in os.walk(os.path.dirname(__file__)):
@@ -34,15 +39,23 @@ def main():
             logging.debug("PDF File was found: " + file_path)
             pdf_files.append(file_path)
 
+    # Files that have no text
     unprocessed_files = []
+
+    # Files that already have OCR or other text
     processed_files = []
+
     for pdf_file in pdf_files:
-        pdf_info = subprocess.check_output(["pdfinfo", pdf_file])
-        if "ocrmypdf" in str(pdf_info):
+        output_pdffonts = subprocess.check_output(["pdffonts", pdf_file])
+        lenght_output_pdffonts = len(output_pdffonts.decode().split('\n'))
+        logging.debug("pdffonts output of file " + pdf_file +
+                      " has lenght " + str(lenght_output_pdffonts))
+        if lenght_output_pdffonts > 3:
             processed_files.append(pdf_file)
         else:
             unprocessed_files.append(pdf_file)
 
+    # Print out the files that will not be processed
     if processed_files:
         processed_files_str = ""
         for f in processed_files:
@@ -50,6 +63,7 @@ def main():
         logging.info("The following PDF files where found but where already " +
                      "processed:\n" + processed_files_str)
 
+    # Start the ocr
     for f in unprocessed_files:
         logging.info("Starting ocr for file: " + f)
         try:
@@ -75,21 +89,41 @@ def check_dependencies(language):
 
     except OSError:
         logging.error("ocrmypdf could not be executed, please install it with:\n" +
-                      "sudo apt-get install pip3\n" +
+                      "sudo apt install python3-pip\n" +
+                      "sudo pip3 install --upgrade pip\n" +
                       "sudo apt-get install libffi-dev\n" +
                       "sudo pip3 install ocrmypdf")
+        exit(1)
+
+    try:
+	# pipe output to /dev/null for silence
+        null = open("/dev/null", "w")
+        subprocess.Popen("tesseract", stdout=null, stderr=null)
+        null.close()
+
+    except OSError:
+        logging.error("tesseract could not be executed, please install it.")
+        exit(1)
+
+    # Check whether the requested tesseract language is available
+    output_tesseract_listlangs = subprocess.check_output(["tesseract", '--list-langs'],
+                                                         stderr=subprocess.STDOUT)
+    output_tesseract_listlangs = output_tesseract_listlangs.decode()
+    if language not in output_tesseract_listlangs:
+        logging.error("tesseract language " + language +
+                      " is not available. Please install it or choose an" +
+                      " available language:\n" + output_tesseract_listlangs)
         exit(1)
 
 
     try:
 	# pipe output to /dev/null for silence
         null = open("/dev/null", "w")
-        subprocess.Popen("pdfinfo", stdout=null, stderr=null)
+        subprocess.Popen("pdffonts", stdout=null, stderr=null)
         null.close()
 
     except OSError:
-        logging.error("pdfinfo could not be executed, please install the language with:\n" +
-                      "sudo apt-get install poppler-utils")
+        logging.error("pdffonts could not be executed, please install it.")
         exit(1)
 
 def get_commandline_arguments():
